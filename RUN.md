@@ -6,12 +6,16 @@ Hệ thống nộp bài học sinh và nhận phản hồi AI như giáo viên V
 
 ## ✦ Tính năng
 
-- 🔐 **Auth**: Đăng ký / Đăng nhập / Đổi mật khẩu
-- 📝 **Nộp bài**: Text + ảnh đính kèm (JPG/PNG/WebP, tối đa 5MB)
-- 🤖 **Chấm AI**: Điểm 0-10, tiêu chí, điểm mạnh/yếu, sửa lỗi, gợi ý
-- 👤 **Profile**: Sửa tên, email, mật khẩu
-- 🌓 **Dark/Light mode**
-- 📱 **Responsive** mobile/desktop
+- **Auth**: Đăng ký / Đăng nhập / Đổi mật khẩu
+- **Nộp bài**: Text + ảnh đính kèm (JPG/PNG/WebP, tối đa 5MB)
+- **Nộp lại bài** — chỉnh sửa và chấm lại với phản hồi mới
+- **Xóa bài làm** — xóa cả dữ liệu DB lẫn ảnh đính kèm, có xác nhận 2 bước
+- **Xuất CSV** — xuất toàn bộ bài làm ra file CSV UTF-8 BOM (mở đúng tiếng Việt trên Excel)
+- **Hồ sơ cá nhân** — avatar, tên hiển thị (Unicode/emoji), đổi mật khẩu
+- **Chấm AI**: Điểm 0-10, tiêu chí, điểm mạnh/yếu, sửa lỗi, gợi ý
+- **Profile**: Sửa tên, email, mật khẩu
+- **Dark/Light mode**
+- **Responsive** mobile/desktop
 
 ## ⚡ Cài đặt & Chạy
 
