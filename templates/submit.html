@@ -1,0 +1,258 @@
+{% extends 'base.html' %}
+{% block title %}Nộp bài — HomeworkAI{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div class="page-header-inner">
+    <div>
+      <h1 class="page-title"><span class="title-tag">// </span>Nộp bài</h1>
+      <p class="page-subtitle">Điền nội dung bài làm và nhận phản hồi AI ngay lập tức</p>
+    </div>
+    <a href="{{ url_for('dashboard') }}" class="btn-ghost">
+      <i class="fa-solid fa-arrow-left"></i> Về Dashboard
+    </a>
+  </div>
+</div>
+
+<div class="container container-narrow">
+  <div class="submit-card">
+    <form method="POST" action="{{ url_for('submit') }}" enctype="multipart/form-data" id="submitForm"
+          data-loading-title="AI đang chấm bài"
+          data-loading-sub="Đang phân tích và chấm điểm bài làm của bạn">
+
+      <div class="form-group">
+        <label class="form-label" for="title">
+          <span class="label-tag">01</span> Tiêu đề bài làm
+        </label>
+        <input type="text" id="title" name="title" class="form-input"
+               placeholder="vd: Phân tích tác phẩm Truyện Kiều..." required maxlength="200" />
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="content_text">
+          <span class="label-tag">02</span> Nội dung bài làm
+        </label>
+        <textarea id="content_text" name="content_text" class="form-input form-textarea"
+                  placeholder="Nhập toàn bộ nội dung bài làm của bạn tại đây..." required rows="12"></textarea>
+        <div class="char-count"><span id="charCount">0</span> ký tự</div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">
+          <span class="label-tag">03</span> Ảnh đính kèm
+          <span class="optional">(tùy chọn — server tự nén nếu cần)</span>
+        </label>
+
+        <!-- File input ẨN — KHÔNG có capture → mở thư viện ảnh trên mobile -->
+        <input type="file" id="imageGallery" name="image" class="file-input-hidden"
+               accept="image/jpeg,image/png,image/webp,image/gif,image/*" />
+        <!-- Input riêng cho camera fallback -->
+        <input type="file" id="imageCamera" class="file-input-hidden"
+               accept="image/*" capture="environment" />
+
+        <div class="file-drop-zone" id="dropZone">
+          <div class="drop-content" id="dropContent">
+            <div class="drop-icon"><i class="fa-solid fa-cloud-arrow-up"></i></div>
+            <p class="drop-text">Kéo thả ảnh vào đây hoặc <span class="accent-text">click để chọn</span></p>
+            <p class="drop-hint"><i class="fa-regular fa-image"></i> JPG, PNG, WebP, GIF — server tự nén</p>
+            <div style="display:flex;gap:8px;margin-top:10px;justify-content:center;flex-wrap:wrap;">
+              <button type="button" id="openGalleryBtn" class="btn-ghost" style="font-size:0.85rem;">
+                <i class="fa-solid fa-images"></i> Thư viện ảnh
+              </button>
+              <button type="button" id="openCameraBtn" class="btn-ghost" style="font-size:0.85rem;">
+                <i class="fa-solid fa-camera"></i> Chụp ảnh
+              </button>
+            </div>
+          </div>
+
+          <!-- Preview ảnh đã chọn -->
+          <div class="img-preview-wrap hidden" id="imgPreview">
+            <img src="" alt="Preview ảnh đính kèm" class="img-preview lightbox-trigger" id="previewImg" />
+            <div class="preview-info">
+              <span id="previewName" class="preview-filename"></span>
+              <button type="button" class="remove-img" onclick="removeImage()">
+                <i class="fa-solid fa-xmark"></i> Xóa
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button type="submit" class="btn-primary btn-lg" id="submitBtn">
+          <i class="fa-solid fa-paper-plane" id="submitIcon"></i>
+          <span id="submitText">Nộp bài &amp; Chấm điểm AI</span>
+        </button>
+        <p class="submit-note"><i class="fa-solid fa-robot"></i> AI sẽ chấm điểm và phản hồi chi tiết trong vài giây</p>
+      </div>
+
+    </form>
+  </div>
+</div>
+
+<!-- Camera modal -->
+<div id="cameraModal" class="hidden" style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.7);z-index:9995;">
+  <div style="background:var(--bg-card);border:1px solid var(--border);padding:14px;border-radius:10px;max-width:420px;width:95%;box-shadow:0 6px 24px rgba(0,0,0,0.4);">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+      <strong style="color:var(--text-primary);">Chụp ảnh bài làm</strong>
+      <button id="closeCameraBtn" class="btn-ghost" style="font-size:13px;">Hủy</button>
+    </div>
+    <video id="cameraVideo" autoplay playsinline style="width:100%;background:#000;border-radius:6px;"></video>
+    <div style="display:flex;gap:8px;margin-top:8px;justify-content:center;">
+      <button id="takePhotoBtn" class="btn-primary"><i class="fa-solid fa-camera-retro"></i> Chụp</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  const fileInputGallery = document.getElementById('imageGallery');
+  const fileInputCamera  = document.getElementById('imageCamera');
+  const dropZone    = document.getElementById('dropZone');
+  const dropContent = document.getElementById('dropContent');
+  const imgPreview  = document.getElementById('imgPreview');
+  const previewImg  = document.getElementById('previewImg');
+  const previewName = document.getElementById('previewName');
+  const openGalleryBtn = document.getElementById('openGalleryBtn');
+  const openCameraBtn  = document.getElementById('openCameraBtn');
+  const cameraModal    = document.getElementById('cameraModal');
+  const cameraVideo    = document.getElementById('cameraVideo');
+  const takePhotoBtn   = document.getElementById('takePhotoBtn');
+  const closeCameraBtn = document.getElementById('closeCameraBtn');
+
+  let currentStream = null;
+
+  // Click vùng drop → gallery
+  dropContent.addEventListener('click', (e) => {
+    if (e.target.closest('#openGalleryBtn') || e.target.closest('#openCameraBtn')) return;
+    if (!imgPreview.classList.contains('hidden')) return;
+    fileInputGallery.click();
+  });
+
+  openGalleryBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    fileInputGallery.click();
+  });
+
+  fileInputGallery.addEventListener('change', (e) => {
+    if (e.target.files[0]) handleFile(e.target.files[0]);
+  });
+
+  fileInputCamera.addEventListener('change', (e) => {
+    if (!e.target.files[0]) return;
+    const file = e.target.files[0];
+    try {
+      const dt = new DataTransfer();
+      dt.items.add(file);
+      fileInputGallery.files = dt.files;
+    } catch(err) { /* ignore */ }
+    handleFile(file);
+  });
+
+  // Drag & drop
+  dropZone.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    if (!imgPreview.classList.contains('hidden')) return;
+    dropZone.classList.add('drag-over');
+  });
+  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+  dropZone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dropZone.classList.remove('drag-over');
+    if (!imgPreview.classList.contains('hidden')) return;
+    const file = e.dataTransfer.files[0];
+    if (file) {
+      try {
+        const dt = new DataTransfer();
+        dt.items.add(file);
+        fileInputGallery.files = dt.files;
+      } catch(err) { /* ignore */ }
+      handleFile(file);
+    }
+  });
+
+  function handleFile(file) {
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      previewImg.src = ev.target.result;
+      const kb = (file.size / 1024).toFixed(0);
+      previewName.textContent = file.name + ' (' + kb + ' KB)';
+      dropContent.classList.add('hidden');
+      imgPreview.classList.remove('hidden');
+    };
+    reader.readAsDataURL(file);
+  }
+
+  window.removeImage = function() {
+    fileInputGallery.value = '';
+    fileInputCamera.value  = '';
+    imgPreview.classList.add('hidden');
+    dropContent.classList.remove('hidden');
+    previewImg.src = '';
+    previewName.textContent = '';
+  };
+
+  // Đếm ký tự
+  const textarea  = document.getElementById('content_text');
+  const charCount = document.getElementById('charCount');
+  textarea.addEventListener('input', () => { charCount.textContent = textarea.value.length; });
+
+  // Form submit: disable button + loading overlay handled by main.js data-loading-* hook
+  document.getElementById('submitForm').addEventListener('submit', () => {
+    const btn = document.getElementById('submitBtn');
+    btn.disabled = true;
+    document.getElementById('submitIcon').className  = 'fa-solid fa-spinner fa-spin';
+    document.getElementById('submitText').textContent = 'Đang xử lý...';
+  });
+
+  /* ── CAMERA ── */
+  openCameraBtn.addEventListener('click', async (e) => {
+    e.stopPropagation();
+    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+      try {
+        cameraModal.classList.remove('hidden');
+        currentStream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: 'environment' } }, audio: false
+        });
+        cameraVideo.srcObject = currentStream;
+        await cameraVideo.play();
+      } catch (err) {
+        cameraModal.classList.add('hidden');
+        fileInputCamera.click();
+      }
+    } else {
+      fileInputCamera.click();
+    }
+  });
+
+  takePhotoBtn.addEventListener('click', () => {
+    const canvas = document.createElement('canvas');
+    canvas.width  = cameraVideo.videoWidth  || 1280;
+    canvas.height = cameraVideo.videoHeight || 720;
+    canvas.getContext('2d').drawImage(cameraVideo, 0, 0, canvas.width, canvas.height);
+    canvas.toBlob((blob) => {
+      if (!blob) { alert('Không thể tạo ảnh.'); return; }
+      const file = new File([blob], 'capture_' + Date.now() + '.jpg', { type: 'image/jpeg' });
+      try {
+        const dt = new DataTransfer();
+        dt.items.add(file);
+        fileInputGallery.files = dt.files;
+      } catch(err) { /* ignore */ }
+      handleFile(file);
+      stopCamera();
+      cameraModal.classList.add('hidden');
+    }, 'image/jpeg', 0.92);
+  });
+
+  closeCameraBtn.addEventListener('click', () => { stopCamera(); cameraModal.classList.add('hidden'); });
+
+  function stopCamera() {
+    if (currentStream) {
+      currentStream.getTracks().forEach(t => t.stop());
+      currentStream = null;
+      cameraVideo.srcObject = null;
+    }
+  }
+  window.addEventListener('beforeunload', stopCamera);
+})();
+</script>
+{% endblock %}

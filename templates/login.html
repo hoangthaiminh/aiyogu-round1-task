@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+{% block title %}Đăng nhập — HomeworkAI{% endblock %}
+{% block content %}
+<div class="auth-page">
+  <div class="auth-glow"></div>
+  <div class="auth-card">
+    <div class="auth-header">
+      <span class="auth-icon"><i class="fa-solid fa-lock"></i></span>
+      <h1 class="auth-title">Đăng nhập</h1>
+      <p class="auth-subtitle">// Truy cập hệ thống chấm bài AI</p>
+    </div>
+    <form method="POST" action="{{ url_for('login') }}" class="auth-form">
+      <div class="form-group">
+        <label class="form-label" for="username">
+          <i class="fa-solid fa-terminal fa-xs"></i> Tên đăng nhập
+        </label>
+        <input type="text" id="username" name="username" class="form-input"
+               placeholder="username" autocomplete="username" required />
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="password">
+          <i class="fa-solid fa-terminal fa-xs"></i> Mật khẩu
+        </label>
+        <div class="input-wrapper">
+          <input type="password" id="password" name="password" class="form-input"
+                 placeholder="••••••••" autocomplete="current-password" required />
+          <button type="button" class="pwd-toggle" onclick="togglePwd('password', this)">
+            <i class="fa-solid fa-eye"></i>
+          </button>
+        </div>
+      </div>
+      <button type="submit" class="btn-primary btn-full">
+        <i class="fa-solid fa-arrow-right-to-bracket"></i> Đăng nhập
+      </button>
+    </form>
+    <div class="auth-footer">
+      <span class="text-muted">Chưa có tài khoản?</span>
+      <a href="{{ url_for('register') }}" class="auth-link">Đăng ký ngay</a>
+    </div>
+    <div class="demo-badge">
+      <span class="badge-dot"></span>
+      DEMO MODE — Không cần API key để test
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,242 @@
+{% extends 'base.html' %}
+{% block title %}Hồ sơ cá nhân — HomeworkAI{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div class="page-header-inner">
+    <div>
+      <h1 class="page-title"><span class="title-tag">// </span>Hồ sơ cá nhân</h1>
+      <p class="page-subtitle">Chỉnh sửa thông tin tài khoản của bạn</p>
+    </div>
+    <a href="{{ url_for('dashboard') }}" class="btn-ghost">
+      <i class="fa-solid fa-arrow-left"></i> Về Dashboard
+    </a>
+  </div>
+</div>
+
+<div class="container container-narrow">
+  <!-- Avatar hero -->
+  <div class="profile-hero">
+    <div class="profile-avatar-wrap">
+      {% if user['avatar_path'] %}
+        <img src="{{ url_for('uploaded_file', filename=user['avatar_path']) }}"
+             class="profile-avatar-img" alt="Avatar" id="avatarPreviewDisplay" />
+      {% else %}
+        <div class="profile-avatar" id="avatarInitials">
+          {{ (user['display_name'] or user['username'])[0].upper() }}
+        </div>
+        <img src="" class="profile-avatar-img hidden" alt="Avatar" id="avatarPreviewDisplay" />
+      {% endif %}
+      <!-- Upload trigger overlay -->
+      <label for="avatar" class="avatar-upload-overlay" title="Đổi ảnh đại diện">
+        <i class="fa-solid fa-camera"></i>
+      </label>
+    </div>
+    <div class="profile-hero-info">
+      <h2 class="profile-name">{{ user['display_name'] or user['username'] }}</h2>
+      <p class="profile-username"><i class="fa-solid fa-at fa-xs"></i> {{ user['username'] }}</p>
+      <p class="profile-since"><i class="fa-regular fa-calendar fa-xs"></i> Thành viên từ <time class="local-time" data-utc="{{ user['created_at'] }}">{{ user['created_at'][:10] }}</time></p>
+    </div>
+  </div>
+
+  <form method="POST" action="{{ url_for('profile') }}" enctype="multipart/form-data" class="profile-form"
+        data-loading-title="Đang cập nhật hồ sơ"
+        data-loading-sub="Đang nén ảnh và lưu thay đổi">
+
+    <!-- Avatar input ẩn (gallery, không có capture) -->
+    <input type="file" id="avatar" name="avatar" class="file-input-hidden"
+           accept="image/jpeg,image/png,image/webp,image/gif,image/*" />
+    <!-- Camera input riêng (chỉ dùng khi bấm Chụp) -->
+    <input type="file" id="avatarCamera" class="file-input-hidden"
+           accept="image/*" capture="environment" />
+
+    <!-- Preview avatar mới chưa lưu -->
+    <div class="avatar-new-preview hidden" id="avatarNewPreview">
+      <i class="fa-solid fa-circle-info"></i>
+      Ảnh đại diện mới đã chọn — nhấn <strong>Lưu thay đổi</strong> để áp dụng
+      <button type="button" class="btn-ghost btn-sm" onclick="cancelAvatar()">
+        <i class="fa-solid fa-xmark"></i> Hủy
+      </button>
+    </div>
+    <!-- Nút chọn nguồn ảnh -->
+    <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:1rem;" id="avatarSourceBtns">
+      <button type="button" class="btn-ghost" style="font-size:0.82rem;" onclick="document.getElementById('avatar').click()">
+        <i class="fa-solid fa-images"></i> Thư viện ảnh
+      </button>
+      <button type="button" class="btn-ghost" style="font-size:0.82rem;" id="avatarOpenCameraBtn">
+        <i class="fa-solid fa-camera"></i> Chụp ảnh
+      </button>
+    </div>
+
+    <div class="form-section">
+      <h3 class="form-section-title">
+        <i class="fa-solid fa-circle-user"></i> Thông tin cơ bản
+      </h3>
+      <div class="form-group">
+        <label class="form-label" for="display_name">Tên hiển thị</label>
+        <input type="text" id="display_name" name="display_name" class="form-input"
+               value="{{ user['display_name'] }}" placeholder="Tên hiển thị" maxlength="120" />
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="email">Email</label>
+        <input type="email" id="email" name="email" class="form-input"
+               value="{{ user['email'] }}" placeholder="email@example.com" maxlength="120" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Tên đăng nhập</label>
+        <input type="text" class="form-input" value="{{ user['username'] }}" disabled />
+        <span class="field-note"><i class="fa-solid fa-lock fa-xs"></i> Tên đăng nhập không thể thay đổi</span>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <h3 class="form-section-title">
+        <i class="fa-solid fa-key"></i> Đổi mật khẩu
+        <span class="optional">(để trống nếu không đổi)</span>
+      </h3>
+      <div class="form-group">
+        <label class="form-label" for="new_password">Mật khẩu mới</label>
+        <div class="input-wrapper">
+          <input type="password" id="new_password" name="new_password" class="form-input"
+                 placeholder="Ít nhất 6 ký tự" autocomplete="new-password" />
+          <button type="button" class="pwd-toggle" onclick="togglePwd('new_password', this)">
+            <i class="fa-solid fa-eye"></i>
+          </button>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="confirm_password">Xác nhận mật khẩu mới</label>
+        <div class="input-wrapper">
+          <input type="password" id="confirm_password" name="confirm_password" class="form-input"
+                 placeholder="Nhập lại mật khẩu mới" autocomplete="new-password" />
+          <button type="button" class="pwd-toggle" onclick="togglePwd('confirm_password', this)">
+            <i class="fa-solid fa-eye"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-actions">
+      <button type="submit" class="btn-primary btn-lg">
+        <i class="fa-solid fa-floppy-disk"></i> Lưu thay đổi
+      </button>
+    </div>
+  </form>
+</div>
+
+<!-- Camera modal cho avatar — phải đặt TRƯỚC script để JS tìm được element -->
+<div id="avatarCameraModal" class="hidden" style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.65);z-index:9999;">
+  <div style="background:var(--bg-card);border:1px solid var(--border);padding:14px;border-radius:10px;max-width:400px;width:94%;box-shadow:0 6px 24px rgba(0,0,0,0.4);">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+      <strong style="color:var(--text-primary);">Chụp ảnh đại diện</strong>
+      <button id="avatarCloseCameraBtn" class="btn-ghost" style="font-size:13px;">Hủy</button>
+    </div>
+    <video id="avatarCameraVideo" autoplay playsinline style="width:100%;background:#000;border-radius:6px;"></video>
+    <div style="display:flex;gap:8px;margin-top:8px;justify-content:center;">
+      <button id="avatarTakePhotoBtn" class="btn-primary">
+        <i class="fa-solid fa-camera-retro"></i> Chụp
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+const avatarInput          = document.getElementById('avatar');
+const avatarCameraInput    = document.getElementById('avatarCamera');
+const avatarPreviewDisplay = document.getElementById('avatarPreviewDisplay');
+const avatarInitials       = document.getElementById('avatarInitials');
+const avatarNewPreview     = document.getElementById('avatarNewPreview');
+const avatarOpenCameraBtn  = document.getElementById('avatarOpenCameraBtn');
+let   originalAvatarSrc    = avatarPreviewDisplay ? avatarPreviewDisplay.src : '';
+let   avatarCameraStream   = null;
+
+function applyAvatarFile(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    if (avatarInitials) avatarInitials.classList.add('hidden');
+    avatarPreviewDisplay.src = ev.target.result;
+    avatarPreviewDisplay.classList.remove('hidden');
+    avatarNewPreview.classList.remove('hidden');
+  };
+  reader.readAsDataURL(file);
+}
+
+avatarInput.addEventListener('change', (e) => {
+  applyAvatarFile(e.target.files[0]);
+});
+
+avatarCameraInput.addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  // Copy sang avatar input để form submit đúng field
+  try {
+    const dt = new DataTransfer();
+    dt.items.add(file);
+    avatarInput.files = dt.files;
+  } catch(err) { /* ignore */ }
+  applyAvatarFile(file);
+});
+
+function cancelAvatar() {
+  avatarInput.value = '';
+  avatarCameraInput.value = '';
+  avatarPreviewDisplay.src = originalAvatarSrc;
+  if (!originalAvatarSrc || originalAvatarSrc.endsWith('/')) {
+    avatarPreviewDisplay.classList.add('hidden');
+    if (avatarInitials) avatarInitials.classList.remove('hidden');
+  }
+  avatarNewPreview.classList.add('hidden');
+}
+
+// ── CAMERA cho avatar ──
+avatarOpenCameraBtn.addEventListener('click', async () => {
+  if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+    try {
+      document.getElementById('avatarCameraModal').classList.remove('hidden');
+      avatarCameraStream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: 'environment' } }, audio: false
+      });
+      document.getElementById('avatarCameraVideo').srcObject = avatarCameraStream;
+      document.getElementById('avatarCameraVideo').play();
+    } catch(err) {
+      document.getElementById('avatarCameraModal').classList.add('hidden');
+      avatarCameraInput.click();
+    }
+  } else {
+    avatarCameraInput.click();
+  }
+});
+
+document.getElementById('avatarTakePhotoBtn').addEventListener('click', () => {
+  const video = document.getElementById('avatarCameraVideo');
+  const canvas = document.createElement('canvas');
+  canvas.width = video.videoWidth || 640;
+  canvas.height = video.videoHeight || 480;
+  canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+  canvas.toBlob((blob) => {
+    if (!blob) { alert('Không thể tạo ảnh.'); return; }
+    const file = new File([blob], 'avatar_' + Date.now() + '.jpg', { type: 'image/jpeg' });
+    try {
+      const dt = new DataTransfer();
+      dt.items.add(file);
+      avatarInput.files = dt.files;
+    } catch(err) { /* ignore */ }
+    applyAvatarFile(file);
+  }, 'image/jpeg', 0.92);
+  stopAvatarCamera();
+  document.getElementById('avatarCameraModal').classList.add('hidden');
+});
+
+document.getElementById('avatarCloseCameraBtn').addEventListener('click', () => {
+  stopAvatarCamera();
+  document.getElementById('avatarCameraModal').classList.add('hidden');
+});
+
+function stopAvatarCamera() {
+  if (avatarCameraStream) {
+    avatarCameraStream.getTracks().forEach(t => t.stop());
+    avatarCameraStream = null;
+    document.getElementById('avatarCameraVideo').srcObject = null;
+  }
+}
+{% endblock %}

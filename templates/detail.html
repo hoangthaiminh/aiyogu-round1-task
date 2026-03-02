@@ -1,0 +1,192 @@
+{% extends 'base.html' %}
+{% block title %}{{ sub['title'] }} — HomeworkAI{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div class="page-header-inner">
+    <div>
+      <h1 class="page-title"><span class="title-tag">// </span>Chi tiết bài làm</h1>
+      <p class="page-subtitle">
+        <i class="fa-regular fa-clock"></i>
+        <time class="local-time" data-utc="{{ sub['submitted_at'] }}">{{ sub['submitted_at'][:16] }}</time>
+      </p>
+    </div>
+    <a href="{{ url_for('dashboard') }}" class="btn-ghost">
+      <i class="fa-solid fa-arrow-left"></i> Về Dashboard
+    </a>
+  </div>
+</div>
+
+<!-- Action bar -->
+<div class="container" style="padding-bottom:0;">
+  <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:1rem;">
+    <a href="{{ url_for('resubmit', submission_id=sub['id']) }}" class="btn-ghost" style="font-size:0.85rem;">
+      <i class="fa-solid fa-rotate-right"></i> Nộp lại bài
+    </a>
+    <button onclick="confirmDelete()" class="btn-ghost" style="font-size:0.85rem;color:var(--neon-red);border-color:var(--neon-red);">
+      <i class="fa-solid fa-trash"></i> Xóa bài làm
+    </button>
+  </div>
+</div>
+
+<!-- Delete confirm modal -->
+<div id="deleteModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;align-items:center;justify-content:center;">
+  <div style="background:var(--bg-card);border:1px solid var(--neon-red);border-radius:12px;padding:28px;max-width:420px;width:90%;box-shadow:0 0 30px rgba(248,113,113,0.2);">
+    <h3 style="color:var(--neon-red);margin-bottom:10px;"><i class="fa-solid fa-triangle-exclamation"></i> Xác nhận xóa</h3>
+    <p style="color:var(--text-secondary);margin-bottom:6px;">Bạn có chắc muốn xóa bài làm <strong style="color:var(--text-primary)">{{ sub['title'] }}</strong> không?</p>
+    <p style="color:var(--neon-red);font-size:0.85rem;margin-bottom:20px;">⚠ Hành động này không thể hoàn tác. Ảnh đính kèm cũng sẽ bị xóa vĩnh viễn.</p>
+    <div style="display:flex;gap:10px;justify-content:flex-end;">
+      <button onclick="document.getElementById('deleteModal').style.display='none'" class="btn-ghost">Hủy</button>
+      <form method="POST" action="{{ url_for('delete_submission', submission_id=sub['id']) }}" style="margin:0;">
+        <button type="submit" class="btn-primary" style="background:var(--neon-red);border-color:var(--neon-red);">
+          <i class="fa-solid fa-trash"></i> Xóa vĩnh viễn
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+  <!-- Score hero -->
+  <div class="score-hero">
+    <div class="score-circle {{ sub['score'] | score_color }}">
+      <span class="score-big">{{ '%.1f' % sub['score'] }}</span>
+      <span class="score-denom">/10</span>
+    </div>
+    <div class="score-info">
+      <h2 class="detail-title">{{ sub['title'] }}</h2>
+      {% if feedback.criteria %}
+      <div class="criteria-list">
+        <div class="criterion">
+          <span class="crit-label"><i class="fa-solid fa-book-open fa-xs"></i> Nội dung</span>
+          <div class="crit-bar"><div class="crit-fill" style="width: {{ (feedback.criteria.content / 10 * 100)|int }}%"></div></div>
+          <span class="crit-score">{{ feedback.criteria.content }}</span>
+        </div>
+        <div class="criterion">
+          <span class="crit-label"><i class="fa-solid fa-language fa-xs"></i> Ngôn ngữ</span>
+          <div class="crit-bar"><div class="crit-fill" style="width: {{ (feedback.criteria.language / 10 * 100)|int }}%"></div></div>
+          <span class="crit-score">{{ feedback.criteria.language }}</span>
+        </div>
+        <div class="criterion">
+          <span class="crit-label"><i class="fa-solid fa-layer-group fa-xs"></i> Cấu trúc</span>
+          <div class="crit-bar"><div class="crit-fill" style="width: {{ (feedback.criteria.structure / 10 * 100)|int }}%"></div></div>
+          <span class="crit-score">{{ feedback.criteria.structure }}</span>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="detail-grid">
+    <!-- Cột trái: bài gốc -->
+    <div class="detail-col">
+      <div class="section-card">
+        <div class="section-label">
+          <i class="fa-solid fa-file-lines"></i> Nội dung bài làm
+        </div>
+        <div class="content-mono">{{ sub['content_text'] }}</div>
+      </div>
+
+      {% if sub['image_path'] %}
+      <div class="section-card">
+        <div class="section-label">
+          <i class="fa-solid fa-image"></i> Ảnh đính kèm
+        </div>
+        <div class="img-viewer">
+          <img src="{{ url_for('uploaded_file', filename=sub['image_path']) }}"
+               alt="Ảnh bài làm" class="detail-img lightbox-trigger"
+               title="Click để xem ảnh lớn" />
+          <p class="img-hint"><i class="fa-solid fa-magnifying-glass-plus"></i> Click ảnh để xem toàn màn hình</p>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Cột phải: phản hồi AI -->
+    <div class="detail-col">
+
+      {% if feedback.detailed_feedback %}
+      <div class="section-card feedback-main">
+        <div class="section-label">
+          <i class="fa-solid fa-star"></i> Nhận xét tổng quan
+        </div>
+        <p class="feedback-text">{{ feedback.detailed_feedback }}</p>
+      </div>
+      {% endif %}
+
+      {% if feedback.strengths %}
+      <div class="section-card">
+        <div class="section-label strengths-label">
+          <i class="fa-solid fa-thumbs-up"></i> Điểm mạnh
+        </div>
+        <ul class="feedback-list strengths-list">
+          {% for s in feedback.strengths %}
+          <li><i class="fa-solid fa-check"></i> {{ s }}</li>
+          {% endfor %}
+        </ul>
+      </div>
+      {% endif %}
+
+      {% if feedback.weaknesses %}
+      <div class="section-card">
+        <div class="section-label weaknesses-label">
+          <i class="fa-solid fa-thumbs-down"></i> Điểm cần cải thiện
+        </div>
+        <ul class="feedback-list weaknesses-list">
+          {% for w in feedback.weaknesses %}
+          <li><i class="fa-solid fa-xmark"></i> {{ w }}</li>
+          {% endfor %}
+        </ul>
+      </div>
+      {% endif %}
+
+      {% if feedback.corrections %}
+      <div class="section-card">
+        <div class="section-label">
+          <i class="fa-solid fa-pen-to-square"></i> Sửa lỗi cụ thể
+        </div>
+        <div class="corrections">
+          {% for c in feedback.corrections %}
+          <div class="correction-item">
+            <div class="correction-original">
+              <span class="corr-tag">Sai</span><span>{{ c.original }}</span>
+            </div>
+            <div class="correction-arrow"><i class="fa-solid fa-arrow-right"></i></div>
+            <div class="correction-fixed">
+              <span class="corr-tag corr-ok">Đúng</span><span>{{ c.corrected }}</span>
+            </div>
+            {% if c.explanation %}
+            <div class="correction-explain">{{ c.explanation }}</div>
+            {% endif %}
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+
+      {% if feedback.suggestions %}
+      <div class="section-card">
+        <div class="section-label">
+          <i class="fa-solid fa-lightbulb"></i> Gợi ý cải thiện
+        </div>
+        <ul class="feedback-list suggestions-list">
+          {% for s in feedback.suggestions %}
+          <li><i class="fa-solid fa-angle-right"></i> {{ s }}</li>
+          {% endfor %}
+        </ul>
+      </div>
+      {% endif %}
+
+    </div>
+  </div>
+</div>
+
+<script>
+function confirmDelete() {
+  const modal = document.getElementById('deleteModal');
+  modal.style.display = 'flex';
+}
+document.getElementById('deleteModal').addEventListener('click', function(e) {
+  if (e.target === this) this.style.display = 'none';
+});
+</script>
+{% endblock %}

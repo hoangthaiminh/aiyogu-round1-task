@@ -1,0 +1,61 @@
+{% extends 'base.html' %}
+{% block title %}Đăng ký — HomeworkAI{% endblock %}
+{% block content %}
+<div class="auth-page">
+  <div class="auth-glow"></div>
+  <div class="auth-card">
+    <div class="auth-header">
+      <span class="auth-icon"><i class="fa-solid fa-user-plus"></i></span>
+      <h1 class="auth-title">Đăng ký</h1>
+      <p class="auth-subtitle">// Tạo tài khoản mới</p>
+    </div>
+    <form method="POST" action="{{ url_for('register') }}" class="auth-form">
+      <div class="form-group">
+        <label class="form-label" for="username">
+          <i class="fa-solid fa-terminal fa-xs"></i> Tên đăng nhập <span class="required">*</span>
+        </label>
+        <input type="text" id="username" name="username" class="form-input"
+               placeholder="vd: hoc_sinh_123"
+               pattern="[a-zA-Z0-9_]{3,30}"
+               title="Chỉ dùng chữ cái a-z, A-Z, số 0-9 và dấu gạch dưới (_), 3–30 ký tự"
+               required autocomplete="username" />
+        <span class="field-note"><i class="fa-solid fa-info-circle fa-xs"></i> Chỉ dùng a–z, A–Z, 0–9 và _ (gạch dưới), 3–30 ký tự</span>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="display_name">
+          <i class="fa-solid fa-terminal fa-xs"></i> Tên hiển thị
+        </label>
+        <input type="text" id="display_name" name="display_name" class="form-input"
+               placeholder="Nguyễn Văn A 😊" autocomplete="name" maxlength="60" />
+        <span class="field-note"><i class="fa-solid fa-info-circle fa-xs"></i> Tên thật, tiếng Việt, emoji đều được — tối đa 60 ký tự</span>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="email">
+          <i class="fa-solid fa-terminal fa-xs"></i> Email
+        </label>
+        <input type="email" id="email" name="email" class="form-input"
+               placeholder="email@example.com" autocomplete="email" />
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="password">
+          <i class="fa-solid fa-terminal fa-xs"></i> Mật khẩu <span class="required">*</span>
+        </label>
+        <div class="input-wrapper">
+          <input type="password" id="password" name="password" class="form-input"
+                 placeholder="Ít nhất 6 ký tự" required autocomplete="new-password" />
+          <button type="button" class="pwd-toggle" onclick="togglePwd('password', this)">
+            <i class="fa-solid fa-eye"></i>
+          </button>
+        </div>
+      </div>
+      <button type="submit" class="btn-primary btn-full">
+        <i class="fa-solid fa-user-plus"></i> Tạo tài khoản
+      </button>
+    </form>
+    <div class="auth-footer">
+      <span class="text-muted">Đã có tài khoản?</span>
+      <a href="{{ url_for('login') }}" class="auth-link">Đăng nhập</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

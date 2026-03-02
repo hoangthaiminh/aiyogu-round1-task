@@ -1,0 +1,283 @@
+{% extends 'base.html' %}
+{% block title %}Nộp lại bài — HomeworkAI{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div class="page-header-inner">
+    <div>
+      <h1 class="page-title"><span class="title-tag">// </span>Nộp lại bài</h1>
+      <p class="page-subtitle">Chỉnh sửa và nộp lại bài làm để nhận phản hồi AI mới</p>
+    </div>
+    <a href="{{ url_for('detail', submission_id=sub['id']) }}" class="btn-ghost">
+      <i class="fa-solid fa-arrow-left"></i> Quay lại
+    </a>
+  </div>
+</div>
+
+<div class="container container-narrow">
+  <div class="submit-card">
+    <form method="POST" action="{{ url_for('resubmit', submission_id=sub['id']) }}" enctype="multipart/form-data" id="resubmitForm"
+          data-loading-title="AI đang chấm lại bài"
+          data-loading-sub="Đang phân tích và cập nhật điểm số">
+      <input type="hidden" name="remove_image" id="removeImageFlag" value="0" />
+
+      <div class="form-group">
+        <label class="form-label" for="title">
+          <span class="label-tag">01</span> Tiêu đề bài làm
+        </label>
+        <input type="text" id="title" name="title" class="form-input"
+               value="{{ sub['title'] }}"
+               placeholder="vd: Phân tích tác phẩm Truyện Kiều..." required maxlength="200" />
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="content_text">
+          <span class="label-tag">02</span> Nội dung bài làm
+        </label>
+        <textarea id="content_text" name="content_text" class="form-input form-textarea"
+                  placeholder="Nhập toàn bộ nội dung bài làm của bạn tại đây..." required rows="12">{{ sub['content_text'] }}</textarea>
+        <div class="char-count"><span id="charCount">{{ sub['content_text']|length }}</span> ký tự</div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">
+          <span class="label-tag">03</span> Ảnh đính kèm
+          <span class="optional">(tùy chọn, tối đa 5MB)</span>
+        </label>
+
+        <!-- File input ẨN — không có capture attribute để mở thư viện ảnh trên mobile -->
+        <input type="file" id="imageGallery" name="image" class="file-input-hidden"
+               accept="image/jpeg,image/png,image/webp,image/gif,image/*" />
+        <!-- Input riêng cho camera (chỉ dùng khi bấm nút Chụp ảnh) -->
+        <input type="file" id="imageCamera" class="file-input-hidden"
+               accept="image/*" capture="environment" />
+
+        <div class="file-drop-zone" id="dropZone">
+          <!-- Hiển thị ảnh cũ nếu có -->
+          {% if sub['image_path'] %}
+          <div class="img-preview-wrap" id="imgPreview">
+            <img src="{{ url_for('uploaded_file', filename=sub['image_path']) }}"
+                 alt="Ảnh hiện tại" class="img-preview lightbox-trigger" id="previewImg" />
+            <div class="preview-info">
+              <span id="previewName" class="preview-filename">Ảnh hiện tại</span>
+              <button type="button" class="remove-img" id="removeBtn" onclick="removeImage()">
+                <i class="fa-solid fa-xmark"></i> Xóa
+              </button>
+            </div>
+          </div>
+          <div class="drop-content hidden" id="dropContent">
+          {% else %}
+          <div class="img-preview-wrap hidden" id="imgPreview">
+            <img src="" alt="Preview" class="img-preview lightbox-trigger" id="previewImg" />
+            <div class="preview-info">
+              <span id="previewName" class="preview-filename"></span>
+              <button type="button" class="remove-img" id="removeBtn" onclick="removeImage()">
+                <i class="fa-solid fa-xmark"></i> Xóa
+              </button>
+            </div>
+          </div>
+          <div class="drop-content" id="dropContent">
+          {% endif %}
+            <div class="drop-icon"><i class="fa-solid fa-cloud-arrow-up"></i></div>
+            <p class="drop-text">Kéo thả ảnh vào đây hoặc <span class="accent-text">click để chọn</span></p>
+            <p class="drop-hint"><i class="fa-regular fa-image"></i> JPG, PNG, WebP, GIF — tối đa 5MB</p>
+            <div style="display:flex; gap:8px; margin-top:10px; justify-content:center; flex-wrap:wrap;">
+              <button type="button" id="openGalleryBtn" class="btn-ghost" style="font-size:0.85rem;">
+                <i class="fa-solid fa-images"></i> Thư viện ảnh
+              </button>
+              <button type="button" id="openCameraBtn" class="btn-ghost" style="font-size:0.85rem;">
+                <i class="fa-solid fa-camera"></i> Chụp ảnh
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button type="submit" class="btn-primary btn-lg" id="submitBtn">
+          <i class="fa-solid fa-rotate-right" id="submitIcon"></i>
+          <span id="submitText">Nộp lại &amp; Chấm điểm AI</span>
+        </button>
+        <p class="submit-note"><i class="fa-solid fa-robot"></i> AI sẽ chấm lại và cập nhật phản hồi</p>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Camera modal -->
+<div id="cameraModal" class="hidden" style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.6);z-index:9999;">
+  <div style="background:#fff;padding:12px;border-radius:8px;max-width:420px;width:95%;box-shadow:0 6px 18px rgba(0,0,0,0.3);">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+      <strong>Chụp ảnh bài làm</strong>
+      <button id="closeCameraBtn" class="btn-ghost" style="font-size:14px;">Hủy</button>
+    </div>
+    <video id="cameraVideo" autoplay playsinline style="width:100%;background:#000;border-radius:6px;"></video>
+    <div style="display:flex;gap:8px;margin-top:8px;justify-content:center;">
+      <button id="takePhotoBtn" class="btn-primary"><i class="fa-solid fa-camera-retro"></i> Chụp</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const fileInputGallery = document.getElementById('imageGallery');
+const fileInputCamera  = document.getElementById('imageCamera');
+const dropZone    = document.getElementById('dropZone');
+const dropContent = document.getElementById('dropContent');
+const imgPreview  = document.getElementById('imgPreview');
+const previewImg  = document.getElementById('previewImg');
+const previewName = document.getElementById('previewName');
+const removeImageFlag = document.getElementById('removeImageFlag');
+
+const openGalleryBtn = document.getElementById('openGalleryBtn');
+const openCameraBtn  = document.getElementById('openCameraBtn');
+const cameraModal    = document.getElementById('cameraModal');
+const cameraVideo    = document.getElementById('cameraVideo');
+const takePhotoBtn   = document.getElementById('takePhotoBtn');
+const closeCameraBtn = document.getElementById('closeCameraBtn');
+
+let currentStream = null;
+
+// Click vùng drop → mở thư viện ảnh
+dropContent.addEventListener('click', (e) => {
+  if (e.target.closest('#openGalleryBtn') || e.target.closest('#openCameraBtn')) return;
+  if (!imgPreview.classList.contains('hidden')) return;
+  fileInputGallery.click();
+});
+
+// Nút Thư viện ảnh (không có capture → mở gallery trên mobile)
+openGalleryBtn.addEventListener('click', (e) => {
+  e.stopPropagation();
+  fileInputGallery.click();
+});
+
+fileInputGallery.addEventListener('change', (e) => {
+  if (e.target.files[0]) handleFile(e.target.files[0], fileInputGallery);
+});
+fileInputCamera.addEventListener('change', (e) => {
+  if (e.target.files[0]) {
+    const file = e.target.files[0];
+    try {
+      const dt = new DataTransfer();
+      dt.items.add(file);
+      fileInputGallery.files = dt.files;
+    } catch(err) { /* ignore */ }
+    handleFile(file, fileInputGallery);
+  }
+});
+
+// Drag & drop
+dropZone.addEventListener('dragover', (e) => {
+  e.preventDefault();
+  if (!imgPreview.classList.contains('hidden')) return;
+  dropZone.classList.add('drag-over');
+});
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop', (e) => {
+  e.preventDefault();
+  dropZone.classList.remove('drag-over');
+  if (!imgPreview.classList.contains('hidden')) return;
+  const file = e.dataTransfer.files[0];
+  if (file) {
+    const dt = new DataTransfer();
+    dt.items.add(file);
+    fileInputGallery.files = dt.files;
+    handleFile(file, fileInputGallery);
+  }
+});
+
+function handleFile(file, input) {
+  if (file.size > 5 * 1024 * 1024) {
+    alert('Ảnh quá lớn! Tối đa 5MB.');
+    input.value = '';
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    previewImg.src = e.target.result;
+    const kb = (file.size / 1024).toFixed(0);
+    previewName.textContent = file.name + ' (' + kb + ' KB)';
+    dropContent.classList.add('hidden');
+    imgPreview.classList.remove('hidden');
+    removeImageFlag.value = '0'; // đang chọn ảnh mới, không xóa
+  };
+  reader.readAsDataURL(file);
+}
+
+function removeImage() {
+  fileInputGallery.value = '';
+  fileInputCamera.value = '';
+  imgPreview.classList.add('hidden');
+  dropContent.classList.remove('hidden');
+  previewImg.src = '';
+  previewName.textContent = '';
+  removeImageFlag.value = '1'; // báo server xóa ảnh cũ
+}
+
+// Đếm ký tự
+const textarea = document.getElementById('content_text');
+const charCount = document.getElementById('charCount');
+textarea.addEventListener('input', () => { charCount.textContent = textarea.value.length; });
+
+// Form submit: disable button + loading overlay từ data-loading-* hook trong main.js
+document.getElementById('resubmitForm').addEventListener('submit', () => {
+  const btn = document.getElementById('submitBtn');
+  btn.disabled = true;
+  document.getElementById('submitIcon').className  = 'fa-solid fa-spinner fa-spin';
+  document.getElementById('submitText').textContent = 'Đang xử lý...';
+});
+
+/* ── CAMERA CAPTURE ── */
+openCameraBtn.addEventListener('click', async (e) => {
+  e.stopPropagation();
+  if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+    try {
+      cameraModal.classList.remove('hidden');
+      const constraints = { video: { facingMode: { ideal: 'environment' } }, audio: false };
+      currentStream = await navigator.mediaDevices.getUserMedia(constraints);
+      cameraVideo.srcObject = currentStream;
+      cameraVideo.play();
+    } catch (err) {
+      cameraModal.classList.add('hidden');
+      fileInputCamera.click();
+    }
+  } else {
+    fileInputCamera.click();
+  }
+});
+
+takePhotoBtn.addEventListener('click', () => {
+  const canvas = document.createElement('canvas');
+  canvas.width = cameraVideo.videoWidth || 1280;
+  canvas.height = cameraVideo.videoHeight || 720;
+  canvas.getContext('2d').drawImage(cameraVideo, 0, 0, canvas.width, canvas.height);
+  canvas.toBlob((blob) => {
+    if (!blob) { alert('Không thể tạo ảnh.'); return; }
+    const filename = 'capture_' + Date.now() + '.jpg';
+    const file = new File([blob], filename, { type: 'image/jpeg' });
+    try {
+      const dt = new DataTransfer();
+      dt.items.add(file);
+      fileInputGallery.files = dt.files;
+      handleFile(file, fileInputGallery);
+    } catch (err) {
+      alert('Trình duyệt không hỗ trợ gán file tự động. Hãy lưu và upload thủ công.');
+    }
+  }, 'image/jpeg', 0.9);
+  stopCamera();
+  cameraModal.classList.add('hidden');
+});
+
+closeCameraBtn.addEventListener('click', () => {
+  stopCamera();
+  cameraModal.classList.add('hidden');
+});
+
+function stopCamera() {
+  if (currentStream) {
+    currentStream.getTracks().forEach(t => t.stop());
+    currentStream = null;
+    cameraVideo.srcObject = null;
+  }
+}
+window.addEventListener('beforeunload', stopCamera);
+</script>
+{% endblock %}

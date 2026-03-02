@@ -1,0 +1,85 @@
+{% extends 'base.html' %}
+{% block title %}Dashboard — HomeworkAI{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div class="page-header-inner">
+    <div>
+      <h1 class="page-title">
+        <span class="title-tag">// </span>Dashboard
+      </h1>
+      <p class="page-subtitle">Xin chào, <span class="accent-text">{{ user['display_name'] or user['username'] }}</span> — các bài nộp của bạn</p>
+    </div>
+    <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+      <a href="{{ url_for('export_csv') }}" class="btn-ghost" style="font-size:0.85rem;">
+        <i class="fa-solid fa-file-csv"></i> Xuất CSV
+      </a>
+      <a href="{{ url_for('submit') }}" class="btn-primary">
+        <i class="fa-solid fa-plus"></i> Nộp bài mới
+      </a>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+  {% if submissions %}
+  {% set total_score = namespace(v=0) %}
+  {% set scores = [] %}
+  {% for s in submissions %}
+    {% if scores.append(s['score']) %}{% endif %}
+    {% set total_score.v = total_score.v + s['score'] %}
+  {% endfor %}
+  {% set avg = total_score.v / submissions|length %}
+  {% set best = scores | max %}
+
+  <div class="stats-bar">
+    <div class="stat-card">
+      <i class="fa-solid fa-file-lines stat-icon"></i>
+      <span class="stat-number">{{ submissions|length }}</span>
+      <span class="stat-label">Bài đã nộp</span>
+    </div>
+    <div class="stat-card">
+      <i class="fa-solid fa-chart-line stat-icon"></i>
+      <span class="stat-number {{ avg | score_color }}">{{ '%.1f' % avg }}</span>
+      <span class="stat-label">Điểm TB</span>
+    </div>
+    <div class="stat-card">
+      <i class="fa-solid fa-trophy stat-icon"></i>
+      <span class="stat-number neon-green">{{ '%.1f' % best }}</span>
+      <span class="stat-label">Điểm cao nhất</span>
+    </div>
+  </div>
+
+  <div class="submissions-grid">
+    {% for sub in submissions %}
+    <a href="{{ url_for('detail', submission_id=sub['id']) }}" class="sub-card">
+      <div class="sub-card-header">
+        <span class="sub-title">{{ sub['title'] }}</span>
+        <span class="sub-score {{ sub['score'] | score_color }}">{{ '%.1f' % sub['score'] }}</span>
+      </div>
+      <div class="score-bar">
+        <div class="score-fill {{ sub['score'] | score_color }}" style="width: {{ (sub['score'] / 10 * 100) | int }}%"></div>
+      </div>
+      <div class="sub-meta">
+        <span class="sub-date"><i class="fa-regular fa-clock"></i> <time class="local-time" data-utc="{{ sub['submitted_at'] }}">{{ sub['submitted_at'][:16] }}</time></span>
+        {% if sub['image_path'] %}
+        <span class="sub-has-img"><i class="fa-solid fa-paperclip"></i> Ảnh</span>
+        {% endif %}
+      </div>
+      <p class="sub-preview">{{ sub['content_text'][:120] }}{% if sub['content_text']|length > 120 %}...{% endif %}</p>
+      <div class="sub-arrow"><i class="fa-solid fa-arrow-right"></i> Xem chi tiết</div>
+    </a>
+    {% endfor %}
+  </div>
+
+  {% else %}
+  <div class="empty-state">
+    <i class="fa-solid fa-folder-open empty-icon"></i>
+    <h2 class="empty-title">Chưa có bài nào</h2>
+    <p class="empty-text">Nộp bài đầu tiên của bạn để nhận phản hồi AI</p>
+    <a href="{{ url_for('submit') }}" class="btn-primary">
+      <i class="fa-solid fa-plus"></i> Nộp bài ngay
+    </a>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
